@@ -174,3 +174,60 @@ class Coverage(ResourceInfo):
                 responseSRS = write_string_list("responseSRS"),
                 supportedFormats = write_string_list("supportedFormats")
             )
+
+def write_parameters(name):
+    def write(builder, pairs):
+        builder.start(name, dict())
+        for k, v in pairs.iteritems():
+            builder.start("entry",dict())
+            builder.start("string", dict())
+            builder.data(k)
+            builder.end("string")
+            builder.start("string", dict())
+            builder.data(v)
+            builder.end("string")
+            builder.end("entry")
+        builder.end(name)
+    return write
+
+def write_dimensions(name):
+    def write(builder, cdList):
+        builder.start(name, dict())
+        for cd in cdList:
+            builder.start("coverageDimension",dict())
+            builder.start("name", dict())
+            builder.data(cd.name)
+            builder.end("name")
+            builder.start("description", dict())
+            builder.data(cd.description + "[" + cd.dimension_range[0] + "," + cd.dimension_range[1] + "]")
+            builder.end("description")
+            builder.end("coverageDimension")
+        builder.end(name)
+    return write
+
+class UnsavedCoverage(Coverage):
+    def __init__(self, catalog, workspace, store, name):
+        super(Coverage, self).__init__()
+        self.catalog = catalog
+        self.workspace = workspace
+        self.store = store
+        self.name = name
+        self.writers = dict(self.additionalWriters.items() + Coverage.writers.items())
+        
+    
+    @property
+    def href(self):
+        return url(self.catalog.service_url,
+            ["workspaces", self.workspace.name,
+             "coveragestores", self.store.name,
+             "coverages"])
+             
+    save_method = "POST"
+    additionalWriters = {'name' : write_string("name"),
+                         'interpolationMethods' : write_string_list("interpolationMethods"),
+                         'defaultInterpolationMethod' : write_string("defaultInterpolationMethod"),
+                         'parameters' : write_parameters("parameters"),
+                         'nativeFormat' : write_string('nativeFormat'),
+                         'description' : write_string('description'),
+                         'dimensions' : write_dimensions("dimensions")
+                         }
